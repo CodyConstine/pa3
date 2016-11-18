@@ -19,9 +19,9 @@
 #define MAXBUFSIZE 1024
 
 //thread handlers
-void * listHandler(void *);
-void * getHandler(void *);
-void * putHandler(void *);
+int listHandler(int);
+int getHandler(int, char[]);
+int putHandler(int, char[]);
 
 //file parser functions
 char * getUser();
@@ -39,7 +39,6 @@ int main(int argc, char * argv[])
 	char *newline = NULL;  //to remove new
 	char command[MAXBUFSIZE];
 	char * pch;
-    pthread_t resovlerThread[4];
 	while(1)
 	{
 		*command = '\0';
@@ -57,41 +56,14 @@ int main(int argc, char * argv[])
 		{
             pch = strtok (NULL, " ");
             printf("PUT command recieved: %s\n", pch);
-            int i = 0;
-            for(i = 0; i<4; i++)
-            {
-                if( pthread_create( &resovlerThread[i] , NULL ,  putHandler , (void*) &i) < 0)
-                {
-                  perror("could not create thread");
-                  return 1;
-                }
-            }
 		}
 		else if(strncmp(pch, "get", 3) == 0)
 		{
-            int i =0;
-            for(i = 0; i<4; i++)
-            {
-                if( pthread_create( &resovlerThread[i] , NULL ,  getHandler , (void*) &i) < 0)
-                {
-                  perror("could not create thread");
-                  return 1;
-                }
-            }
             pch = strtok (NULL, " ");
             printf("GET command recieved: %s\n", pch);
 		}
 		else if(strncmp(pch, "list", 2) == 0)
 		{
-            int i = 0;
-            for(i = 0; i<4; i++)
-            {
-                if( pthread_create( &resovlerThread[i] , NULL ,  listHandler , (void*) &i) < 0)
-                {
-                  perror("could not create thread");
-                  return 1;
-                }
-            }
             pch = strtok (NULL, " ");
             printf("LIST command recieved: %s\n", pch);
 		}
