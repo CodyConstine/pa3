@@ -100,5 +100,6 @@ void *responseHandler(void * socket_desc){//the functions for the threads to run
     //Receive a message from client
     read_size = recv(sock , client_message , 2000 , 0);
     printf("Recieved client message: %s\n", client_message);
+    close(sock);
     return 0;
 }
