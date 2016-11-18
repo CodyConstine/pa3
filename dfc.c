@@ -14,6 +14,17 @@
 #include <string.h>
 #include <dirent.h>
 #include <pthread.h>
+#include <stdio.h>
+#include <openssl/md5.h>
+#include <ctype.h>
+
+
+#define STR_VALUE(val) #val
+#define STR(name) STR_VALUE(name)
+
+#define PATH_LEN 256
+#define MD5_LEN 32
+
 
 
 #define MAXBUFSIZE 1024
@@ -27,6 +38,7 @@ int putHandler(char*, char *);
 char * getUser();
 char * getPassword();
 int getServerPort(int, char *);
+int getMD5(char *, char *);
 
 
 int main(int argc, char * argv[])
@@ -94,6 +106,20 @@ int putHandler(char * file, char * conf)
 
     struct sockaddr_in serv_addr;
     struct hostent *server;
+    unsigned long long int num;
+
+    char md5[MD5_LEN + 1];
+    if (!getMD5(file, md5)) {
+        puts("Error occured!");
+        exit(0);
+    } else {
+        sscanf(md5, "%llx", &num);  // assuming you checked input
+        //printf("Success! MD5 sum is: %s\n", md5);
+        //printf("Success! MD5 sum is: %llu\n", num);
+    }
+
+    num = num%4;
+    //printf("%llu\n", num);
 
     //char buffer[256];
     portno = getServerPort(1,conf);
@@ -168,4 +194,23 @@ int getServerPort(int index, char * conf)
        free(line);
     }
     return atoi(root);
+}
+int getMD5(char * file, char * md5_sum)
+{
+    #define MD5SUM_CMD_FMT "md5sum %." STR(PATH_LEN) "s 2>/dev/null"
+    char cmd[PATH_LEN + sizeof (MD5SUM_CMD_FMT)];
+    sprintf(cmd, MD5SUM_CMD_FMT, file);
+    #undef MD5SUM_CMD_FMT
+
+    FILE *p = popen(cmd, "r");
+    if (p == NULL) return 0;
+
+    int i, ch;
+    for (i = 0; i < MD5_LEN && isxdigit(ch = fgetc(p)); i++) {
+        *md5_sum++ = ch;
+    }
+
+    *md5_sum = '\0';
+    pclose(p);
+    return i == MD5_LEN;
 }
