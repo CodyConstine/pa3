@@ -12,9 +12,13 @@
 #include <sys/types.h>
 #include <pthread.h> //for threading , link with lpthread
 #include <dirent.h>
+#include <sys/stat.h>
 
 #define BUFSIZE 8096
 #define MAXBUFSIZE 100
+char * rootdirectory;
+
+
 int size(char *ptr)
 {
     //variable used to access the subsequent array elements.
@@ -33,7 +37,61 @@ int size(char *ptr)
     //return the size of the array
     return count;
 }
+int checkdirectory(char * directory, char * root)
+{
+  DIR* dir;
+  char fullroot[50];
 
+    strcpy(fullroot,".");
+    strcat(fullroot, root);
+    strcat(fullroot,"/");
+    strcat(fullroot,directory);
+    dir = opendir(fullroot);
+  //dir = opendir(directory);
+//  puts("CheckinDirectory");
+  if (dir)
+  {
+    puts("exists");
+    /* Directory exists. */
+    closedir(dir);
+  }
+  else if (ENOENT == errno)
+  {
+
+    puts("Doesnt Exist");
+    /* Directory does not exist. */
+
+      DIR * checkroot = opendir(root);
+      if(checkroot)
+      {
+        //root exists
+      }
+      else
+      {
+        char mkdircommand[50];
+        strcpy(mkdircommand,"mkdir .");
+        strcat(mkdircommand, root);
+        printf("Making: %s\n", root);
+        system(mkdircommand);
+
+        //int result = mkdir(root, 0777);
+      }
+      puts("Making User Directory");
+      char mkdircommand[50];
+      strcpy(mkdircommand,"mkdir ");
+      strcat(mkdircommand, fullroot);
+      printf("Making: %s\n", fullroot);
+      system(mkdircommand);
+
+//      int result = mkdir(fullroot, 0777);
+
+  }
+  else
+  {
+    puts("screwed up");
+    /* opendir() failed for some other reason. */
+  }
+}
 
 int user_check(char * inusername, char * inpassword)
 {
@@ -67,6 +125,7 @@ int user_check(char * inusername, char * inpassword)
             //   printf("Username: %s  UsernameIN:  %s\n", user, inusername);
             //   printf("Password: %s  PasswordIN: %s\n", pw, inpassword);
                printf("Valid User\n");
+               checkdirectory(user,rootdirectory);//user/root
                founduser = 1;
             }
 
@@ -81,71 +140,127 @@ int user_check(char * inusername, char * inpassword)
   }
 
 }
-void put(char msg[], char buf[], int sock)
+void readafile(int sock, char buf[], char * root)
 {
 
+    char filename[MAXBUFSIZE];
+    FILE *f;
+    int size=0;
+    int nbytes;
+    //char filereal[MAXBUFSIZE];
+    printf("SIZE BEFORE %d\n", size);
+    nbytes = read(sock, filename, MAXBUFSIZE);
+    printf("Filereal: |%s|\n", filename);
+    nbytes = read(sock, &size, sizeof(int));
+    //nbytes = read(sock, size, MAXBUFSIZE);
+    printf("SIZE %d\n", size);
 
-  int nbytes;
-  char filename[MAXBUFSIZE];
-  FILE *f;
-  int size;
-  nbytes = read(sock, &size, sizeof(int));
-  printf("SIZE %d\n", size);
-  memcpy(filename, buf+4, strlen(buf)+1);
-  if(strlen(filename)!=0)
-    {
-      strcat(filename, "_put.s");
-      //printf("FILENAME %s\n", filename);
-      bzero(buf,MAXBUFSIZE);
-      //printf("zeroed")
-      //printf("%s",buf);
-      f = fopen(filename, "w");
-      //fwrite(buf, 1, MAXBUFSIZE, f);
-
-      char full[size];
-      bzero(full, size);
-      if(nbytes<0)
+    //memcpy(filename, buf+4, strlen(buf)+1);
+    if(strlen(filename)!=0)
       {
-        printf("ERROR GETTING FILE\n");
-      }
-      if (strcmp(buf, "File not found" ) != 0)
-      {
+        char fullfile[100];
+        strcpy(fullfile,root);
+        strcat(fullfile,"/");
+        strcat(fullfile,filename);
+        strcat(filename, "_put.s");
+        printf("FILENAME %s\n", filename);
+        bzero(buf,MAXBUFSIZE);
+        //printf("zeroed");
+        printf("BUFFER AFTER ZERO%s\n",buf);
+        f = fopen(fullfile, "w+");
+        //fwrite(buf, 1, MAXBUFSIZE, f);
 
-        //fwrite(buf, 1, nbytes, f);
-        while(1)
+        char full[size];
+        bzero(full, size);
+        if(nbytes<0)
+        {
+          printf("ERROR GETTING FILE\n");
+        }
+        if (strcmp(buf, "File not found" ) != 0)
         {
 
-
-            //int putsreturn=fputs(buf, f);
-            //fputs(buf, f);
-            //printf("PUTSRETURN %d",putsreturn);
-            //fprintf(f, buf);
-            bzero(buf,MAXBUFSIZE);
-
-            nbytes = read(sock, buf, MAXBUFSIZE);
-            if(strcmp(buf, "Done fetching file")==0)
-            {
-              printf("done\n");
-              break;
-            }
-            strcat(full, buf);
-            //f=freopen(filename, "w+", stdout);
-            //printf("%s",buf);
+          //fwrite(buf, 1, nbytes, f);
+          while(1)
+          {
 
 
 
+              bzero(buf,MAXBUFSIZE);
+
+              nbytes = read(sock, buf, MAXBUFSIZE);
+              if(strcmp(buf, "Done fetching file")==0)
+              {
+                printf("done\n");
+                buf[0]='\0';
+                break;
+              }
+              strcat(full, buf);
+              //f=freopen(filename, "w+", stdout);
+              printf("Sent this buffer |%s|\n",buf);
+
+          }
+          printf("%s PRINTED FULL",full);
+          fwrite(full, 1, size, f);
+          fclose(f);
         }
-        //printf("%s PRINTED FULL",full);
-        fwrite(full, 1, size, f);
-        fclose(f);
-      }
 
-    }
+      }
 }
-void get(char message[], char cmd[], int sock)
+void put(char msg[], char buf[], int sock, char * root)
+{
+
+  readafile(sock, buf, root);
+  readafile(sock, buf, root);
+
+}
+
+int sendfile(char *filename, int sock)
+{
+  char buffer[MAXBUFSIZE];
+  char message[MAXBUFSIZE];
+  int nbytes=0;
+  int size=0;
+  FILE * f;
+  printf("GETTING SIZE OF FILE %s\n", filename);
+  f = fopen(filename, "r");
+
+  if(f==NULL)
+  {
+    //sprintf(buffer, "File not found");
+    //strcpy(message, buffer);
+    //nbytes=write(sock,buffer, MAXBUFSIZE);
+    printf("FILE NOT FOUND %s\n", filename);
+    return -1;
+  }
+  else
+  {
+    fseek(f, 0, SEEK_END);
+    size = ftell(f);
+    fseek(f, 0, SEEK_SET);
+    printf("SIZE %d\n", size);
+    nbytes=write(sock,filename,MAXBUFSIZE);
+    nbytes=write(sock, &size, sizeof(int));
+    printf("SENDING %s\n", filename);
+    *buffer = '\0';
+    while (fgets(buffer, MAXBUFSIZE, f)!=NULL)
+    {
+    //  printf("%s", buffer);
+      nbytes=write(sock,buffer, MAXBUFSIZE);
+    }
+
+    sprintf(buffer, "Done fetching file");
+  //  strcpy(message, buffer);
+
+     nbytes=write(sock,buffer, MAXBUFSIZE);
+  }
+  fclose(f);
+  return 1;
+}
+
+void get(char message[], char cmd[], int sock, char * root)
 {
   /*
-    with file given, add "." to front and look for ".1-4"
+    with file given, add "." to front and look for ".1-4"im l
   */
   int nbytes;
   char filename[MAXBUFSIZE];
@@ -156,51 +271,84 @@ void get(char message[], char cmd[], int sock)
 
   if(strlen(filename)!=0)
   {
-     f = fopen(filename, "r");
-     int size;
-     fseek(f, 0, SEEK_END);
-      size = ftell(f);
-      fseek(f, 0, SEEK_SET);
+    /*
 
-     nbytes=write(sock, &size, sizeof(int));
-     if(f==NULL)
+      Given text.txt, search for .text.txt.1-4 and find ones on server
+      then send those back.
+
+    */
+    char actualfile[30];
+    char f1[30];
+    char f2[30];
+    char f3[30];
+    char f4[30];
+    strcpy(actualfile,".");
+    strcat(actualfile,filename);
+
+
+
+     char fullfile[100];
+     strcpy(fullfile,root);
+     strcat(fullfile,"/");
+     strcat(fullfile,actualfile);
+     strcpy(f1,fullfile);
+     strcat(f1,".1");
+     strcpy(f2,fullfile);
+     strcat(f2,".2");
+     strcpy(f3,fullfile);
+     strcat(f3,".3");
+     strcpy(f4,fullfile);
+     strcat(f4,".4");
+     int suc=-1;
+     printf("Looking For Files %s, %s, %s, %s\n",f1, f2, f3, f4);
+     suc=sendfile(f1,sock);
+     if(!suc)
      {
-       sprintf(buffer, "File not found");
-       strcpy(message, buffer);
-       nbytes=write(sock,buffer, MAXBUFSIZE);
+       printf("FILE %s Failed\n", f1);
      }
-     else
+     suc=sendfile(f2,sock);
+     if(!suc)
      {
-       *buffer = '\0';
-       while (fgets(buffer, MAXBUFSIZE, f)!=NULL)
-       {
-         printf("%s", buffer);
-         nbytes=write(sock,buffer, MAXBUFSIZE);
-       }
-
-       sprintf(buffer, "Done fetching file");
-       strcpy(message, buffer);
-
-        nbytes=write(sock,buffer, MAXBUFSIZE);
+       printf("FILE %s Failed\n", f2);
+     }
+     suc=sendfile(f3,sock);
+     if(!suc)
+     {
+       printf("FILE %s Failed\n", f3);
+     }
+     suc=sendfile(f4,sock);
+     if(!suc)
+     {
+       printf("FILE %s Failed\n", f4);
      }
   }
-
 }
 
-void list(char * root, char * user, int sock)
+void list(int sock, char * root)
 {
     DIR *d;
     int nbytes;
     struct dirent *dir;
-    d = opendir(".");  //user
-
+    char realdir[30];
+    strcpy(realdir,root);
+    strcat(realdir,"/");
+    d = opendir(realdir);  //user
+    char fulldir[30];
       if (d)
       {
         while ((dir = readdir(d)) != NULL)
         {
           printf("|%s|\n", dir->d_name);
+          strcpy(fulldir,dir->d_name);
+          int sizefl = size(fulldir);
+          printf("SIZE OF File: %d\n",sizefl);
+          fulldir[sizefl]='\0';
+          printf("DIRECTORY IS |%s|\n",fulldir);
 
-          nbytes = write(sock, dir->d_name, MAXBUFSIZE);
+
+        //  nbytes= write(sock, &sizefl, sizeof(int));
+
+          nbytes = write(sock, fulldir, MAXBUFSIZE);
           printf("bytes passed %d\n", nbytes);
         }
         char donesig[]="Done With LS";
@@ -225,7 +373,7 @@ void * connection_handle(void *  socket_d)
     while(1)
     {
        ret =read(socketfd,buffer,BUFSIZE);
-       printf("Initial Buffer |%s|\n", buffer);
+       //printf("Initial Buffer |%s|\n", buffer);
        if(!strncmp(buffer,"GET ",4) || !strncmp(buffer,"get ",4) || !strncmp(buffer,"PUT ",4) || !strncmp(buffer,"put ",4) || !strncmp(buffer,"LIST",4) || !strncmp(buffer,"list",4))
        {
             if(ret > 0 && ret < BUFSIZE)  /* return code is valid chars */
@@ -266,22 +414,28 @@ void * connection_handle(void *  socket_d)
 
             if(validuser==1)
             {
+              char fullroot[50];
+              strcpy(fullroot,".");
+              strcat(fullroot, rootdirectory);
+              strcat(fullroot,"/");
+              strcat(fullroot,user);
+              printf("FULL ROOT PATH IS: %s\n", fullroot);
               printf("Buffer after removing PW: |%s|\n", buffer);
               printf("A valid User is accessing this server\n");
 
                 if(!strncmp(buffer,"GET ",4) || !strncmp(buffer,"get ",4) ) {
                     printf("A Get Was Accepted\n");
-                    get(message,buffer, socketfd);
+                    get(message,buffer, socketfd, fullroot);
                 }
                 if(!strncmp(buffer,"list",4) || !strncmp(buffer,"LIST",4) ) {
                     printf("A list Was Accepted\n");
 
-                        list(".",user,socketfd);
+                        list(socketfd, fullroot);
                 }
 
                 if(!strncmp(buffer,"put ",4) || !strncmp(buffer,"PUT ",4) ) {
                     printf("A put Was Accepted\n");
-                    put(message, buffer, socketfd);
+                    put(message, buffer, socketfd, fullroot);
                 }
              }
         }
@@ -292,8 +446,8 @@ int main(int argc, char **argv)
 {
     int listenfd = 0;
     int socketfd = 0;
-
-    long port = strtol(argv[1], NULL, 10);
+    rootdirectory = argv[1];
+    long port = strtol(argv[2], NULL, 10);
     struct sockaddr_in serv_addr;
     static struct sockaddr_in cli_addr;
     char sendBuff[1025];
