@@ -18,7 +18,17 @@
 #define MAXBUFSIZE 100
 char * rootdirectory;
 
-
+int file_exist(const char *fname)
+{
+    FILE *file;
+    if (file = fopen(fname, "r"))
+    {
+        fclose(file);
+        return 1;
+    }
+    else
+      return 0;
+}
 int size(char *ptr)
 {
     //variable used to access the subsequent array elements.
@@ -229,10 +239,12 @@ int sendfile(char *filename, int sock)
     //sprintf(buffer, "File not found");
     //strcpy(message, buffer);
     //nbytes=write(sock,buffer, MAXBUFSIZE);
+    //nbytes=write(sock,filename,MAXBUFSIZE);
+    //nbytes=write(sock, &size, sizeof(int));
     printf("FILE NOT FOUND %s\n", filename);
     return -1;
   }
-  else
+  else if (f!=NULL)
   {
     fseek(f, 0, SEEK_END);
     size = ftell(f);
@@ -252,9 +264,10 @@ int sendfile(char *filename, int sock)
   //  strcpy(message, buffer);
 
      nbytes=write(sock,buffer, MAXBUFSIZE);
+     fclose(f);
+     return 1;
   }
-  fclose(f);
-  return 1;
+
 }
 
 void get(char message[], char cmd[], int sock, char * root)
@@ -284,9 +297,6 @@ void get(char message[], char cmd[], int sock, char * root)
     char f4[30];
     strcpy(actualfile,".");
     strcat(actualfile,filename);
-
-
-
      char fullfile[100];
      strcpy(fullfile,root);
      strcat(fullfile,"/");
@@ -299,28 +309,77 @@ void get(char message[], char cmd[], int sock, char * root)
      strcat(f3,".3");
      strcpy(f4,fullfile);
      strcat(f4,".4");
-     int suc=-1;
+     int suc=0;
      printf("Looking For Files %s, %s, %s, %s\n",f1, f2, f3, f4);
+     int filecheck = 0;
+     if(!file_exist(f1))
+     {
+       filecheck+=1;
+     }
+     if(!file_exist(f2))
+     {
+       filecheck+=1;
+     }
+     if(!file_exist(f3))
+     {
+       filecheck+=1;
+     }
+     if(!file_exist(f4))
+     {
+       filecheck+=1;
+     }
+     if(filecheck==4)
+     {
+      // write(sock,"ABORT\0",6);
+     }
+     char checker[5];
+     if(filecheck!=4)
+     {
+       //write(sock,"READY\0",6);
+
+
+     }
+
      suc=sendfile(f1,sock);
-     if(!suc)
+     int failcheck=0;
+     if(suc=-1)
      {
        printf("FILE %s Failed\n", f1);
+       failcheck+=1;
      }
      suc=sendfile(f2,sock);
-     if(!suc)
+     if(suc=-1)
      {
        printf("FILE %s Failed\n", f2);
+       failcheck+=1;
      }
      suc=sendfile(f3,sock);
-     if(!suc)
+     if(suc=-1)
      {
        printf("FILE %s Failed\n", f3);
+       failcheck+=1;
      }
      suc=sendfile(f4,sock);
-     if(!suc)
+     if(suc=-1)
      {
        printf("FILE %s Failed\n", f4);
+       failcheck+=1;
      }
+     printf("FAILCHECK %d\n", failcheck);
+     if(failcheck==4)
+     {
+       int sz = -1;
+       sleep(1);
+       write(sock,".\0",5);
+       puts("SEND FAIL");
+       sleep(1);
+       write(sock,".\0",5);
+       puts("SEND FAIL");
+
+
+     }
+     puts("out");
+
   }
 }
 

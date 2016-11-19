@@ -12,7 +12,9 @@ for x in range(1,4):
         incomplete+=1
 
 if(incomplete==0):
-    fmain = open(filename,"a+")
+    if(os.path.isfile(filename)):
+        os.remove(filename)
+    fmain = open(filename,"w")
     print("Opening file"+filename)
     for y in range(1,5):
         f = open("."+filename+"."+str(y), "r")

@@ -22,6 +22,17 @@ char user[50];
 char pw[50];
 
 
+int file_exist(const char *fname)
+{
+    FILE *file;
+    if (file = fopen(fname, "r"))
+    {
+        fclose(file);
+        return 1;
+    }
+    else
+      return 0;
+}
 int size(char *ptr)
 {
     //variable used to access the subsequent array elements.
@@ -133,81 +144,127 @@ int config(void)
 
 }
 
-void readafile(int sock, char buf[])
+int readafile(int sock, char buf[])
 {
-  int nbytes = 0;
-  char filename[MAXBUFSIZE];
-  char *space;
-  FILE *f;
-  int sizefl=0;
-  printf("SIZE BEFORE %d\n", sizefl);
-  nbytes = read(sock, filename, MAXBUFSIZE);
-  printf("Filereal: |%s|\n", filename);
-  nbytes = read(sock, &sizefl, sizeof(int));
-  char *slash;
-  int index;
-  char filehold[MAXBUFSIZE];
-  slash=strrchr(filename,'/');
-  index=(int)(slash-filename);
-  strncpy(filehold,filename+index+1,size(filename));
-  printf("FILEHOLDER %s\n",filehold);
-  //strcpy(filename,filehold);
-  printf("SIZE %d\n", sizefl);
-  //space=strrchr(buf,' ');
-  //index=(int)(space-buf);
-//  buf[index]='\0';
-  //memcpy(filename, buf+4, strlen(buf)+1);
-
-  if(strlen(filehold)!=0)
+    int nbytes = 0;
+    char filename[MAXBUFSIZE];
+    char *space;
+    FILE *f;
+    int sizefl=0;
+    printf("SIZE BEFORE %d\n", sizefl);
+    nbytes = read(sock, filename, MAXBUFSIZE);
+    printf("Filereal: |%s|\n", filename);
+    if(strcmp(filename,"."))
     {
-      //strcat(filename,);
-      //printf("FILENAME %s\n", filename);
-      bzero(buf,MAXBUFSIZE);
-      f = fopen(filehold, "w");
-
-
-      char full[sizefl];
-      bzero(full, sizefl);
-      if(nbytes<0)
-      {
-        printf("ERROR GETTING FILE\n");
-      }
-      if (strcmp(buf, "File not found" ) != 0)
-      {
-        while(1)
-        {
-            bzero(buf,MAXBUFSIZE);
-
-            nbytes = read(sock, buf, MAXBUFSIZE);
-            if(strcmp(buf, "Done fetching file")==0)
-            {
-              printf("done\n");
-              buf[0]='\0';
-              break;
-            }
-            strcat(full, buf);
-        }
-        //printf("%s PRINTED FULL",full);
-        fwrite(full, 1, sizefl, f);
-        fclose(f);
-
-      }
-
+      nbytes = read(sock, &sizefl, sizeof(int));
     }
+    if(!strcmp(filename,"."))
+    {
+      filename[0]='\0';
+    }
+
+    printf("SIZE %d\n", sizefl);
+
+
+    //strcpy(filename,filehold);
+
+    //space=strrchr(buf,' ');
+    //index=(int)(space-buf);
+  //  buf[index]='\0';
+    //memcpy(filename, buf+4, strlen(buf)+1);
+
+    if(strlen(filename)!=0 && sizefl>0)
+      {
+        char *slash;
+        int index;
+        char filehold[MAXBUFSIZE];
+        slash=strrchr(filename,'/');
+        index=(int)(slash-filename);
+        strncpy(filehold,filename+index+1,size(filename));
+        printf("FILEHOLDER %s\n",filehold);
+        //strcat(filename,);
+        //printf("FILENAME %s\n", filename);
+        bzero(buf,MAXBUFSIZE);
+        f = fopen(filehold, "w");
+
+
+        char full[sizefl];
+        bzero(full, sizefl);
+        if(nbytes<0)
+        {
+          printf("ERROR GETTING FILE\n");
+        }
+        if (strcmp(buf, "File not found" ) != 0)
+        {
+          while(1)
+          {
+              bzero(buf,MAXBUFSIZE);
+
+              nbytes = read(sock, buf, MAXBUFSIZE);
+              if(strcmp(buf, "Done fetching file")==0)
+              {
+                printf("done\n");
+                buf[0]='\0';
+                break;
+              }
+              strcat(full, buf);
+          }
+          //printf("%s PRINTED FULL",full);
+          fwrite(full, 1, sizefl, f);
+          fclose(f);
+
+        }
+        return 1;
+     }
+     else
+     {
+       return -1;
+     }
 }
 
 void get (char buf[], char filename[], int sock, int sock2)//add sockets
 {
-    readafile(sock, buf);
-    readafile(sock, buf);
-    readafile(sock2, buf);
-    readafile(sock2, buf);
-    //gotta read from each socket
-    printf("GETGETGETFILE: %s\n", filename);
-    char getcommand[60];
-    strcpy(getcommand,"python get.py ");
-    strcat(getcommand, filename);
-    system(getcommand);
+
+    int checkerr=0;
+
+
+        puts("ready rudolph?");
+          //check[0]='\0';
+
+          if(readafile(sock, buf)>0)
+          {
+            if(-1==readafile(sock, buf))
+            {
+              checkerr+=2;
+            }
+          }
+          else{
+            checkerr+=2;
+          }
+
+
+          puts("ready santa!");
+          if(readafile(sock2, buf)>0)
+          {
+            if(-1==readafile(sock2, buf))
+            {
+              checkerr+=2;
+            }
+          }
+          else{
+            checkerr+=2;
+          }
+
+          //gotta read from each socket
+
+          printf("GETGETGETFILE: %s\n", filename);
+          char getcommand[60];
+          strcpy(getcommand,"python get.py ");
+          strcat(getcommand, filename);
+          if(checkerr!=4){
+            system(getcommand);
+          }
+
 
 }
 int splitfile(char * filename)
@@ -518,6 +575,7 @@ int main(void)
     char command[MAXBUFSIZE];
     while(1)
     {
+
       *command = '\0';
       printf("> ");
 
@@ -551,6 +609,7 @@ int main(void)
       //printf("|%s|\n",lstcmd);
       if(strcmp(lstcmd, "list")==0 || strcmp(cmd, "put")==0 || strcmp(cmd, "get")==0)
       {
+
         strcat(command," ");
         strcat(command, uspw);
         //printf("%s\n",command);
@@ -564,12 +623,19 @@ int main(void)
         in = (int)(spc-flnm);
         flnm[in]='\0';
         //printf("FILENMMAINDEL: %s", flnm);
+        if(strcmp(cmd, "put"))
+        {
+          nbytes2 = write(sockfd2, command, MAXBUFSIZE);
 
-        nbytes2 = write(sockfd2, command, MAXBUFSIZE);
+          nbytes = write(sockfd1, command, MAXBUFSIZE);
 
-        nbytes = write(sockfd1, command, MAXBUFSIZE);
+        }
+        else if(!strcmp(cmd, "put")&&file_exist(flnm))
+        {
+          nbytes2 = write(sockfd2, command, MAXBUFSIZE);
 
-
+          nbytes = write(sockfd1, command, MAXBUFSIZE);
+        }
 
         if(strcmp(cmd, "get")==0)
         {
@@ -577,7 +643,10 @@ int main(void)
         }
         if(strcmp(cmd, "put")==0)
         {
-          put(command, sockfd1, sockfd2);
+          if(file_exist(flnm))
+          {
+            put(command, sockfd1, sockfd2);
+          }
         }
         if(strcmp(lstcmd, "list")==0)
         {
@@ -590,7 +659,13 @@ int main(void)
       else
         printf("%s\n", command);
 
-
+      /*sleep(1);
+      char clearguy[MAXBUFSIZE];
+      read(sockfd1,clearguy,MAXBUFSIZE);
+      clearguy[0]='\0';
+      read(sockfd2,clearguy,MAXBUFSIZE);
+      clearguy[0]='\0';
+      */
 
 
     }

@@ -9,22 +9,31 @@ while array.count("..") > 0:
     array.remove("..")
 while array.count(".") > 0:
     array.remove(".")
+
+for element in array:
+    if element[0]!=".":
+        array.pop(element)
 #print(array)
 
 completed = []
 for a in array:
     found = 0;
     for c in completed:
-#        print(a[:len(a)-2])
-#        print(c[:len(c)])
+        #print(a[:len(a)-2])
+        #print(a)
+        index=len(a)
+        index=-1
+        #print(index)
+        #print(a[index])
         if(a[:len(a)-2]==c[0]):
             found = 1;
-            num=int(a[len(a)-1:len(a)])
+            num=int(a[-1])
             c[num]="y"
 
     if(found==0):
         listadd = [a[:len(a)-2],"n","n","n","n"]
-        num=int(a[len(a)-1])
+        #print(a[len(a)-1])
+        num=int(a[-1])
         listadd[num]="y"
         completed.append(listadd)
 
